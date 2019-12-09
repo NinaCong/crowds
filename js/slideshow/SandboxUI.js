@@ -41,9 +41,6 @@ function SandboxUI(container) {
     _updateContagion();
   }, 1);
 
-
-<<<<<<< Updated upstream
-=======
   // var toolChooserLabel = document.createElement("div");
   // toolChooserLabel.innerHTML = getWords("sandbox_tool_chooser");
   // toolChooserLabel.style.marginTop = "0.25em";
@@ -91,7 +88,6 @@ function SandboxUI(container) {
   shortcuts.id = "sandbox_shortcuts";
   container.appendChild(shortcutsLabel);
   container.appendChild(shortcuts);
->>>>>>> Stashed changes
 
   // HEY IT'S SANDBOX MODE //
   slideshow.simulations.sims[0].SANDBOX_MODE = true;
