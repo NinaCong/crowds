@@ -156,8 +156,9 @@ function Sim(config) {
     self.networkConfig.peeps.forEach(function(p) {
       var x = p[0],
         y = p[1],
-        infected = p[2];
-      self.addPeep(x, y, infected);
+        infected = p[2],
+        defaultRisk = p[3];
+      self.addPeep(x, y, infected, defaultRisk);
     });
 
     // Connections
@@ -198,6 +199,7 @@ function Sim(config) {
     self.connections.forEach(function(connection) {
       connection.update();
     });
+    self.updateRisk();
     self.peeps.forEach(function(peep) {
       peep.update();
     });
@@ -395,11 +397,20 @@ function Sim(config) {
       if (!peep.infected) {
         // timeout for animation
         var roll = Math.random();
-        if (roll < 0.3456) {
+        if (roll < peep.risk) {
           setTimeout(function() {
             peep.infect();
           }, 333);
         }
+      }
+      if (self.STEP > self.contagion) {
+        // var nonsmoke = 0;
+        // self.peeps.forEach(peep => {
+        //   if (!!peep.infected) nonsmoke++;
+        // });
+        publish("sim/stop");
+
+        // alert(`${nonsmoke} survived ${self.contagion} rounds without smoking!`);
       }
     });
 
@@ -490,7 +501,8 @@ function Sim(config) {
       savedNetwork.peeps.push([
         Math.round(peep.x),
         Math.round(peep.y),
-        peep.infected ? 1 : 0
+        peep.infected ? 1 : 0,
+        peep.defaultRisk
       ]);
     });
     self.connections.forEach(function(c) {
@@ -523,8 +535,14 @@ function Sim(config) {
   ////////////////
 
   // Add Peeps/Connections
-  self.addPeep = function(x, y, infected) {
-    var peep = new Peep({ x: x, y: y, infected: infected, sim: self });
+  self.addPeep = function(x, y, infected, defaultRisk) {
+    var peep = new Peep({
+      x: x,
+      y: y,
+      infected: infected,
+      sim: self,
+      defaultRisk: defaultRisk
+    });
     self.peeps.push(peep);
     return peep;
   };
@@ -553,6 +571,56 @@ function Sim(config) {
     self.connections.push(connection);
     return connection;
   };
+  self.updateRisk = () => {
+    // TODO:
+    var G = self.generateJsnx();
+
+    var graphStats = self.calculateGraphStats(G);
+    var transitivity = graphStats[0];
+    var isolates = graphStats[1];
+    var diameter = graphStats[2];
+
+    var betweenc = jsnx.betweennessCentrality(G);
+    self.peeps.forEach((peep, i) => {
+      if (peep.infected) {
+        peep.risk = 1;
+        return;
+      }
+      var transit = peep.numInfectFriends / peep.numFriends || 0;
+      var r =
+        peep.defaultRisk +
+        0.000005027 * isolates +
+        0.0522 * diameter -
+        1.908 * transitivity -
+        betweenc.get(i) * 7.149;
+      peep.risk = Math.exp(r) / (1 + Math.exp(r)) + transit * 0.05;
+    });
+  };
+  self.calculateGraphStats = G => {
+    var nodes = Array(self.peeps.length).keys();
+
+    let transitivity = jsnx.transitivity(G);
+    let isolates = 0;
+    jsnx.degree(G, nodes).forEach((value, key, map) => {
+      if (value == 0) isolates++;
+    });
+    let diameter = 0;
+    Array.from(jsnx.allPairsShortestPathLength(G).values()).forEach(lengths => {
+      diameter = Math.max(diameter, Math.max(...Array.from(lengths.values())));
+    });
+
+    return [transitivity, isolates, diameter];
+  };
+  self.generateJsnx = () => {
+    var G = new jsnx.Graph();
+    var nodes = Array(self.peeps.length).keys();
+    G.addNodesFrom(nodes);
+    self.connections.forEach(edge => {
+      G.addEdge(self.peeps.indexOf(edge.from), self.peeps.indexOf(edge.to));
+    });
+    return G;
+  };
+
   self.getFriendsOf = function(peep) {
     var friends = [];
     for (var i = 0; i < self.connections.length; i++) {

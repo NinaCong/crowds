@@ -7,6 +7,7 @@ function Peep(config) {
   self.velocity = { x: 0, y: 0 };
   self.infected = !!config.infected;
   self.sim = config.sim;
+  self.defaultRisk = config.defaultRisk;
 
   // Update:
   self.numFriends = 0;
@@ -14,6 +15,7 @@ function Peep(config) {
   self.isPastThreshold = false;
   self.isMajority = false;
   var _faceFollow = 0.75 + Math.random() * 0.1;
+  self.risk = Math.random();
   self.update = function() {
     // Friends connected... or infected
     var friends = self.sim.getFriendsOf(self);
@@ -24,20 +26,20 @@ function Peep(config) {
     });
 
     // Past threshold?
-    self.isPastThreshold = false;
-    if (self.sim.contagion == 0) {
-      // simple
-      if (self.numInfectedFriends > 0) self.isPastThreshold = true;
-    } else {
-      // complex
-      if (self.numFriends > 0) {
-        var ratio = self.numInfectedFriends / self.numFriends;
-        if (ratio >= self.sim.contagion - 0.0001) {
-          // floating point errors
-          self.isPastThreshold = true;
-        }
-      }
-    }
+    // self.isPastThreshold = false;
+    // if (self.sim.contagion == 0) {
+    //   // simple
+    //   if (self.numInfectedFriends > 0) self.isPastThreshold = true;
+    // } else {
+    //   // complex
+    //   if (self.numFriends > 0) {
+    //     var ratio = self.numInfectedFriends / self.numFriends;
+    //     if (ratio >= self.sim.contagion - 0.0001) {
+    //       // floating point errors
+    //       self.isPastThreshold = true;
+    //     }
+    //   }
+    // }
 
     // SPLASH: FORCE-DIRECTED
     if (self.sim.options.splash) {
@@ -233,8 +235,7 @@ function Peep(config) {
       if (self.numFriends > 0) {
         // %, centered
         ctx.textAlign = "center";
-        var labelPercent =
-          Math.round(100 * (self.numInfectedFriends / self.numFriends)) + "%";
+        var labelPercent = Math.round(100 * self.risk) + "%";
         ctx.fillText(labelPercent, 6, -12);
 
         /*
@@ -267,24 +268,24 @@ function Peep(config) {
         ctx.rect(
           -barWidth / 2,
           -barHeight / 2,
-          barWidth * (self.numInfectedFriends / self.numFriends),
+          barWidth * self.risk,
           barHeight
         );
         ctx.fill();
       }
 
       // a pointer for contagion level
-      ctx.translate(0, -barHeight / 2);
-      ctx.save();
-      ctx.translate(barWidth * 0.33 - barWidth / 2, 0);
-      ctx.lineCap = "butt";
-      ctx.strokeStyle = uiColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0, -2);
-      ctx.lineTo(0, barHeight + 2);
-      ctx.stroke();
-      ctx.restore();
+      // ctx.translate(0, -barHeight / 2);
+      // ctx.save();
+      // ctx.translate(barWidth * 0.33 - barWidth / 2, 0);
+      // ctx.lineCap = "butt";
+      // ctx.strokeStyle = uiColor;
+      // ctx.lineWidth = 1.5;
+      // ctx.beginPath();
+      // ctx.moveTo(0, -2);
+      // ctx.lineTo(0, barHeight + 2);
+      // ctx.stroke();
+      // ctx.restore();
 
       ctx.restore();
     }
